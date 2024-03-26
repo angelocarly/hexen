@@ -6,10 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-image = "0.24"
-winit = { version = "0.29.15" }
-# The examples require the validation layers, which means the SDK or
-# equivalent development packages should be present, so we can link
-# directly and benefit from the infallible `Entry` constructor.
-ash = { version = "0.37.3+1.3.251", default-features = false, features = ["linked", "debug"] }
-ash-window = "0.12.0"
+wgpu = { version = "0.19.3"}
+winit = "0.29.15"
+bytemuck = "1.15.0"
