@@ -10,3 +10,5 @@ wgpu = { version = "0.19.3"}
 winit = "0.29.15"
 bytemuck = "1.15.0"
 tokio = { version = "1.0.0", features = ["rt", "rt-multi-thread", "macros"] }
+png = "0.17.13"
+glam = "0.27.0"
