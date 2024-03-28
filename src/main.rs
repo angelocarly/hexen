@@ -86,6 +86,7 @@ async fn main() {
         }],
     });
 
+    start_instant = Instant::now();
     let mut encoder = device.create_command_encoder(&Default::default());
     {
         let mut cpass = encoder.begin_compute_pass(&Default::default());
@@ -97,6 +98,7 @@ async fn main() {
     queue.submit(Some(encoder.finish()));
 
     device.poll(wgpu::Maintain::Wait);
+    println!("shader execution {:?}", start_instant.elapsed());
 
     let buf_slice = output_buf.slice(..);
     buf_slice.map_async(wgpu::MapMode::Read, move |_| {});
@@ -110,12 +112,12 @@ async fn main() {
     let mut color_sink = image::ColorSink::new(WIDTH as u32, HEIGHT as u32);
     for (index, chunk) in data.chunks( 4 ).enumerate() {
         color_sink.get_data()[index] = Color(
-            255 * chunk[0] as u8,
-            255 * chunk[1] as u8,
-            255 * chunk[2] as u8,
-            255 * chunk[3] as u8
+            ( 255.0f32 * chunk[0] ) as u8,
+            ( 255.0f32 * chunk[1] ) as u8,
+            ( 255.0f32 * chunk[2] ) as u8,
+            ( 255.0f32 * chunk[3] ) as u8
         );
     };
     image::write_png_image(color_sink, "output.png");
-    println!("image processing {:?}", start_instant.elapsed());
+    println!("image output {:?}", start_instant.elapsed());
 }
