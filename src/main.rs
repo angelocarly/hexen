@@ -2,7 +2,6 @@ mod image;
 
 use std::default::Default;
 use std::time::Instant;
-use glam::vec4;
 use wgpu::InstanceDescriptor;
 use wgpu::util::DeviceExt;
 use crate::image::Color;
@@ -10,8 +9,8 @@ use crate::image::Color;
 #[tokio::main]
 async fn main() {
 
-    const width: usize = 512;
-    const height: usize = 512;
+    const WIDTH: usize = 512;
+    const HEIGHT: usize = 512;
 
     // Shader
     let instance = wgpu::Instance::new(InstanceDescriptor::default());
@@ -36,7 +35,7 @@ async fn main() {
     });
     println!("shader compilation {:?}", start_instant.elapsed());
 
-    let intput_f = vec![0f32; 4 * width * height];
+    let intput_f = vec![0f32; 4 * WIDTH * HEIGHT];
     let input: &[u8] = bytemuck::cast_slice(&intput_f);
     let input_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: None,
@@ -92,7 +91,7 @@ async fn main() {
         let mut cpass = encoder.begin_compute_pass(&Default::default());
         cpass.set_pipeline(&pipeline);
         cpass.set_bind_group(0, &bind_group, &[]);
-        cpass.dispatch_workgroups(width as u32, height as u32, 1);
+        cpass.dispatch_workgroups(WIDTH as u32, HEIGHT as u32, 1);
     }
     encoder.copy_buffer_to_buffer(&input_buf, 0, &output_buf, 0, input.len() as u64);
     queue.submit(Some(encoder.finish()));
@@ -108,7 +107,7 @@ async fn main() {
 
     // Image
     start_instant = Instant::now();
-    let mut color_sink = image::ColorSink::new(width as u32, height as u32);
+    let mut color_sink = image::ColorSink::new(WIDTH as u32, HEIGHT as u32);
     for (index, chunk) in data.chunks( 4 ).enumerate() {
         color_sink.get_data()[index] = Color(
             255 * chunk[0] as u8,

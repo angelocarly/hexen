@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::path::Path;
 use std::io::BufWriter;
-use std::ops::{AddAssign, DivAssign, Range};
+use std::ops::{AddAssign, DivAssign};
 
 #[derive( Clone, Copy )]
 pub struct Color( pub u8, pub u8, pub u8, pub u8 );
