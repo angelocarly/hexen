@@ -4,7 +4,12 @@ use std::io::BufWriter;
 use std::ops::{AddAssign, DivAssign};
 
 #[derive( Clone, Copy )]
-pub struct Color( pub u8, pub u8, pub u8, pub u8 );
+pub struct Color {
+    r: u8,
+    g: u8,
+    b: u8,
+    a: u8
+}
 
 pub struct ColorSink {
     width: u32,
@@ -12,19 +17,25 @@ pub struct ColorSink {
     data: Vec<Color>
 }
 
+impl Color {
+    pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self { r, g, b, a }
+    }
+}
+
 impl AddAssign for Color {
     fn add_assign(&mut self, other: Self) {
-        self.0 += other.0;
-        self.1 += other.1;
-        self.2 += other.2;
+        self.r += other.r;
+        self.g += other.g;
+        self.b += other.b;
     }
 }
 
 impl DivAssign for Color {
     fn div_assign(&mut self, other: Self) {
-        self.0 /= other.0;
-        self.1 /= other.1;
-        self.2 /= other.2;
+        self.r /= other.r;
+        self.g /= other.g;
+        self.b /= other.b;
     }
 }
 
@@ -44,7 +55,7 @@ impl ColorSink {
             panic!("Width and height must be greater than 0.");
         }
 
-        let data = vec![Color(0, 0, 0, 255); (width * height) as usize];
+        let data = vec![Color::new(0, 0, 0, 255); (width * height) as usize];
         Self { width, height, data }
     }
 
@@ -90,9 +101,9 @@ pub fn write_png_image( in_data: ColorSink, path: &str ) {
 
     let mut im_data = vec![ 0; (in_data.width * in_data.height * 3) as usize ].into_boxed_slice();
     for i in 0..(in_data.width * in_data.height) as usize {
-        im_data[i * 3 + 0] = in_data.data[i].0 as u8;
-        im_data[i * 3 + 1] = in_data.data[i].1 as u8;
-        im_data[i * 3 + 2] = in_data.data[i].2 as u8;
+        im_data[i * 3 + 0] = in_data.data[i].r;
+        im_data[i * 3 + 1] = in_data.data[i].g;
+        im_data[i * 3 + 2] = in_data.data[i].b;
     }
 
     let mut writer = encoder.write_header().unwrap();
@@ -115,12 +126,12 @@ pub fn read_png_image( path: &str ) -> ColorSink {
     let mut data = vec![ 0 as u8; (width * height * 3) as usize ].into_boxed_slice();
     reader.next_frame( &mut data ).unwrap();
 
-    let mut color_data = vec![ Color(0, 0, 0, 255); (width * height) as usize ];
+    let mut color_data = vec![ Color::new(0, 0, 0, 255); (width * height) as usize ];
     for i  in 0..(width * height) as usize {
-        color_data[i].0 = data[i * 3 + 0] as u8;
-        color_data[i].1 = data[i * 3 + 1] as u8;
-        color_data[i].2 = data[i * 3 + 2] as u8;
-        color_data[i].3 = data[i * 3 + 3] as u8;
+        color_data[i].r = data[i * 3 + 0] as u8;
+        color_data[i].g = data[i * 3 + 1] as u8;
+        color_data[i].b = data[i * 3 + 2] as u8;
+        color_data[i].a = data[i * 3 + 3] as u8;
     }
 
     ColorSink {

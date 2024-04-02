@@ -111,7 +111,7 @@ async fn main() {
     start_instant = Instant::now();
     let mut color_sink = image::ColorSink::new(WIDTH as u32, HEIGHT as u32);
     for (index, chunk) in data.chunks( 4 ).enumerate() {
-        color_sink.get_data()[index] = Color(
+        color_sink.get_data()[index] = Color::new(
             ( 255.0f32 * chunk[0] ) as u8,
             ( 255.0f32 * chunk[1] ) as u8,
             ( 255.0f32 * chunk[2] ) as u8,
