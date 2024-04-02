@@ -2,9 +2,17 @@ struct ImageBuf {
     data: array<vec4f>,
 }
 
+struct DataBuf {
+    data: array<vec4f>,
+}
+
 @group(0)
 @binding(0)
 var<storage, read_write> image: ImageBuf;
+
+@group(0)
+@binding(1)
+var<storage, read_write> funcdata: DataBuf;
 
 // Todo: send image size to shader
 @compute
@@ -17,7 +25,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     p = floor( p * 512.0f / f32( pixel_level ) ) / ( 512.0f / f32( pixel_level ) );
 
     var data = image.data[id];
-    data = vec4f( p, 0, 1 );
+    data = vec4f( p, funcdata.data[0].r, 1 );
 
     image.data[id] = data;
 }
