@@ -50,6 +50,10 @@ fn create_compute_pipeline(device: &Device, bind_group_layout: &BindGroupLayout)
     })
 }
 
+fn buffer_data() -> Vec<f32> {
+    vec![ 0f32; 4 ]
+}
+
 #[tokio::main]
 async fn main() {
     const WIDTH: usize = 512;
@@ -88,6 +92,7 @@ async fn main() {
             | wgpu::BufferUsages::COPY_DST
             | wgpu::BufferUsages::COPY_SRC,
     });
+
     let output_buf = device.create_buffer(&wgpu::BufferDescriptor {
         label: None,
         size: input.len() as u64,
@@ -95,7 +100,7 @@ async fn main() {
         mapped_at_creation: false,
     });
 
-    let funcdata_f = vec![ 1f32; 4 ];
+    let funcdata_f = buffer_data();
     let funcdata: &[u8] = bytemuck::cast_slice(&funcdata_f);
     let funcdata_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: None,
