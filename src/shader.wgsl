@@ -60,20 +60,19 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var p = vec2f( f32( global_id.x ) / 512.0f, f32( global_id.y ) / 512.0f );
     p = floor( p * 512.0f / f32( pixel_level ) ) / ( 512.0f / f32( pixel_level ) ) + vec2f( 0.5f / ( 512.0f / f32( pixel_level ) ) );
 
-    var data = image.data[id];
-    data = vec4f( p, funcdata.data[0].r, 1 );
-
     // Center position
     p = p - vec2f( .5f );
 
     // Hexagons!
-    let hexCoord = screenPosToHexCoord( p, 0.2f );
-    data = vec4f( hexCoord, 1 );
+    let hexCoord = screenPosToHexCoord( p, 0.02f );
+    var data = vec4f( hexCoord, 1 );
 
     // Edge
     if length( p ) > .47f {
         data = vec4f( 0, 0, 0, 1 );
     }
+
+    data += funcdata.data[0];
 
     image.data[id] = data;
 }
