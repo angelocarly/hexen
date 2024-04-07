@@ -1,4 +1,5 @@
 mod image;
+mod render;
 
 use std::default::Default;
 use std::time::Instant;
@@ -54,59 +55,24 @@ fn buffer_data() -> Vec<f32> {
     vec![ 1f32; 4 ]
 }
 
-struct Context
-{
-    instance: wgpu::Instance,
-    adapter: wgpu::Adapter,
-    device: wgpu::Device,
-    queue: wgpu::Queue,
-}
-
-impl Context {
-    async fn new() -> Self {
-        let instance = wgpu::Instance::new(InstanceDescriptor::default());
-        let adapter = instance.request_adapter(&Default::default()).await.unwrap();
-        let features = adapter.features();
-        let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: None,
-                    required_features: features & wgpu::Features::TIMESTAMP_QUERY,
-                    required_limits: Default::default(),
-                },
-                None,
-            )
-            .await
-            .unwrap();
-
-        Self {
-            instance,
-            adapter,
-            device,
-            queue,
-        }
-    }
-}
-
-
 #[tokio::main]
 async fn main() {
     const WIDTH: usize = 512;
     const HEIGHT: usize = 512;
 
     // Device setup
-    let context = Context::new().await;
+    let context = render::Context::new().await;
 
     // Pipeline setup
 
-    let bind_group_layout = create_bind_group_layout(&context.device);
-    let pipeline = create_compute_pipeline(&context.device, &bind_group_layout);
+    let bind_group_layout = create_bind_group_layout(&context.get_device());
+    let pipeline = create_compute_pipeline(&context.get_device(), &bind_group_layout);
 
     // Buffer setup
 
     let input_f = vec![0f32; 4 * WIDTH * HEIGHT];
     let input: &[u8] = bytemuck::cast_slice(&input_f);
-    let input_buf = context.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+    let input_buf = context.get_device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: None,
         contents: input,
         usage: wgpu::BufferUsages::STORAGE
@@ -114,7 +80,7 @@ async fn main() {
             | wgpu::BufferUsages::COPY_SRC,
     });
 
-    let output_buf = context.device.create_buffer(&wgpu::BufferDescriptor {
+    let output_buf = context.get_device().create_buffer(&wgpu::BufferDescriptor {
         label: None,
         size: input.len() as u64,
         usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
@@ -123,7 +89,7 @@ async fn main() {
 
     let funcdata_f = buffer_data();
     let funcdata: &[u8] = bytemuck::cast_slice(&funcdata_f);
-    let funcdata_buf = context.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+    let funcdata_buf = context.get_device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: None,
         contents: funcdata,
         usage: wgpu::BufferUsages::STORAGE
@@ -133,7 +99,7 @@ async fn main() {
 
     // Bind group setup
 
-    let bind_group = context.device.create_bind_group(&wgpu::BindGroupDescriptor {
+    let bind_group = context.get_device().create_bind_group(&wgpu::BindGroupDescriptor {
         label: None,
         layout: &bind_group_layout,
         entries: &[wgpu::BindGroupEntry {
@@ -148,7 +114,7 @@ async fn main() {
     // Render call
 
     let mut start_instant = Instant::now();
-    let mut encoder = context.device.create_command_encoder(&Default::default());
+    let mut encoder = context.get_device().create_command_encoder(&Default::default());
     {
         let mut cpass = encoder.begin_compute_pass(&Default::default());
         cpass.set_pipeline(&pipeline);
@@ -156,15 +122,15 @@ async fn main() {
         cpass.dispatch_workgroups(WIDTH as u32, HEIGHT as u32, 1);
     }
     encoder.copy_buffer_to_buffer(&input_buf, 0, &output_buf, 0, input.len() as u64);
-    context.queue.submit(Some(encoder.finish()));
-    context.device.poll(wgpu::Maintain::Wait);
+    context.get_queue().submit(Some(encoder.finish()));
+    context.get_device().poll(wgpu::Maintain::Wait);
     println!("shader execution {:?}", start_instant.elapsed());
 
     // Parse output
 
     let buf_slice = output_buf.slice(..);
     buf_slice.map_async(wgpu::MapMode::Read, move |_| {});
-    context.device.poll(wgpu::Maintain::Wait);
+    context.get_device().poll(wgpu::Maintain::Wait);
 
     let data_raw = &*buf_slice.get_mapped_range();
     let data: &[f32] = bytemuck::cast_slice(data_raw);
