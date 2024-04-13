@@ -1,11 +1,12 @@
+mod compute;
 mod image;
 mod render;
 
+use crate::image::Color;
 use std::default::Default;
 use std::time::Instant;
-use wgpu::{BindGroupLayout, Device, InstanceDescriptor};
 use wgpu::util::DeviceExt;
-use crate::image::Color;
+use wgpu::{BindGroupLayout, Device};
 
 fn create_bind_group_layout(device: &Device) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -20,7 +21,8 @@ fn create_bind_group_layout(device: &Device) -> wgpu::BindGroupLayout {
                     min_binding_size: None,
                 },
                 count: None,
-            }, wgpu::BindGroupLayoutEntry {
+            },
+            wgpu::BindGroupLayoutEntry {
                 binding: 1,
                 visibility: wgpu::ShaderStages::COMPUTE,
                 ty: wgpu::BindingType::Buffer {
@@ -29,11 +31,15 @@ fn create_bind_group_layout(device: &Device) -> wgpu::BindGroupLayout {
                     min_binding_size: None,
                 },
                 count: None,
-            }],
+            },
+        ],
     })
 }
 
-fn create_compute_pipeline(device: &Device, bind_group_layout: &BindGroupLayout) -> wgpu::ComputePipeline {
+fn create_compute_pipeline(
+    device: &Device,
+    bind_group_layout: &BindGroupLayout,
+) -> wgpu::ComputePipeline {
     let cs_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: None,
         source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
@@ -52,13 +58,13 @@ fn create_compute_pipeline(device: &Device, bind_group_layout: &BindGroupLayout)
 }
 
 fn buffer_data() -> Vec<f32> {
-    vec![ 1f32; 4 ]
+    vec![1f32; 4]
 }
 
 #[tokio::main]
 async fn main() {
-    const WIDTH: usize = 512;
-    const HEIGHT: usize = 512;
+    const WIDTH: usize = 2048;
+    const HEIGHT: usize = 2048;
 
     // Device setup
     let context = render::Context::new().await;
@@ -72,13 +78,15 @@ async fn main() {
 
     let input_f = vec![0f32; 4 * WIDTH * HEIGHT];
     let input: &[u8] = bytemuck::cast_slice(&input_f);
-    let input_buf = context.get_device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: None,
-        contents: input,
-        usage: wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_DST
-            | wgpu::BufferUsages::COPY_SRC,
-    });
+    let input_buf = context
+        .get_device()
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: None,
+            contents: input,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
+        });
 
     let output_buf = context.get_device().create_buffer(&wgpu::BufferDescriptor {
         label: None,
@@ -89,32 +97,41 @@ async fn main() {
 
     let funcdata_f = buffer_data();
     let funcdata: &[u8] = bytemuck::cast_slice(&funcdata_f);
-    let funcdata_buf = context.get_device().create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: None,
-        contents: funcdata,
-        usage: wgpu::BufferUsages::STORAGE
-            | wgpu::BufferUsages::COPY_DST
-            | wgpu::BufferUsages::COPY_SRC,
-    });
+    let funcdata_buf = context
+        .get_device()
+        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: None,
+            contents: funcdata,
+            usage: wgpu::BufferUsages::STORAGE
+                | wgpu::BufferUsages::COPY_DST
+                | wgpu::BufferUsages::COPY_SRC,
+        });
 
     // Bind group setup
 
-    let bind_group = context.get_device().create_bind_group(&wgpu::BindGroupDescriptor {
-        label: None,
-        layout: &bind_group_layout,
-        entries: &[wgpu::BindGroupEntry {
-            binding: 0,
-            resource: input_buf.as_entire_binding(),
-        }, wgpu::BindGroupEntry {
-            binding: 1,
-            resource: funcdata_buf.as_entire_binding(),
-        }],
-    });
+    let bind_group = context
+        .get_device()
+        .create_bind_group(&wgpu::BindGroupDescriptor {
+            label: None,
+            layout: &bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: input_buf.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: funcdata_buf.as_entire_binding(),
+                },
+            ],
+        });
 
     // Render call
 
     let mut start_instant = Instant::now();
-    let mut encoder = context.get_device().create_command_encoder(&Default::default());
+    let mut encoder = context
+        .get_device()
+        .create_command_encoder(&Default::default());
     {
         let mut cpass = encoder.begin_compute_pass(&Default::default());
         cpass.set_pipeline(&pipeline);
@@ -146,7 +163,7 @@ async fn main() {
             (255.0f32 * chunk[2]) as u8,
             (255.0f32 * chunk[3]) as u8,
         );
-    };
+    }
     image::write_png_image(color_sink, "output.png");
     println!("image output {:?}", start_instant.elapsed());
 }

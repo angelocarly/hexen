@@ -14,65 +14,73 @@ var<storage, read_write> image: ImageBuf;
 @binding(1)
 var<storage, read_write> funcdata: DataBuf;
 
-fn screenPosToHexCoord(position : vec2f, diameter: f32) -> vec3f {
-    let hexToScreenMatrix = ( 1.0f / 3.0f ) * mat2x2(-3, 0, -sqrt( 3.0f ), 2.0 * sqrt( 3.0f ) );
+fn rand22(n: vec2f) -> f32 { return fract(sin(dot(n, vec2f(12.9898, 4.1414))) * 43758.5453); }
 
-    let posInHexSpace = hexToScreenMatrix * (position / vec2f(diameter));
+fn ray_cast(p: vec2f) -> vec3f {
 
-    let newPos = vec3f( -posInHexSpace.x - posInHexSpace.y, posInHexSpace.x, posInHexSpace.y );
+    // Calculate normal
+    let range = 0.47f;
 
-    // How much does the position deviate from a unit coord?
-    let roundDelta = vec3f( abs(round(newPos.x) - newPos.x), abs(round(newPos.y) - newPos.y), abs(round(newPos.z) - newPos.z) );
-
-    // Recalculate the axis with the biggest error
-    var nodepos: vec3f;
-    if (roundDelta.z > roundDelta.x && roundDelta.z > roundDelta.y)
-    {
-        // Z biggest error
-        nodepos.x = round(newPos.x);
-        nodepos.y = round(newPos.y);
-        nodepos.z = -nodepos.x - nodepos.y;
-    } else if (roundDelta.y > roundDelta.x && roundDelta.y > roundDelta.z)
-    {
-        // Y biggest error
-        nodepos.x = round(newPos.x);
-        nodepos.z = round(newPos.z);
-        nodepos.y = -nodepos.x - nodepos.z;
-    } else
-    {
-        // X biggest error
-        nodepos.y = round(newPos.y);
-        nodepos.z = round(newPos.z);
-        nodepos.x = -nodepos.y - nodepos.z;
+    if length(p) > range {
+        return vec3f(0.0f);
     }
 
-    return nodepos;
+    var normal = vec3f(p.x, p.y, range - length(p));
+    normal = normalize(normal);
+
+    // Cast ray from normal
+    // Maybe do something with noise
+    var col = vec3f(0);
+    var pos = vec3f(0);
+    let dist = 24.0f;
+    let size = 40.0f;
+
+    for (var i = 0; i < 1000; i++) {
+        pos += normal * (1.411f);
+
+        if length(pos - vec3f(0, -dist, 0)) < size {
+            normal.y = -normal.y;
+        }
+        if length(pos - vec3f(0, dist, 0)) < size {
+            normal.y = -normal.y;
+        }
+        if length(pos - vec3f(0, 0, -dist)) < size {
+            normal.z = -normal.z;
+        }
+        if length(pos - vec3f(0, 0, dist)) < size {
+            normal.z = -normal.z;
+        }
+        if length(pos - vec3f(-dist, 0, 0)) < size {
+            normal.x = -normal.x;
+        }
+        if length(pos - vec3f(dist, 0, 0)) < size {
+            normal.x = -normal.x;
+        }
+    }
+
+    var v = length(pos) / 20.0f;
+    v = v * v * v * v;
+
+    return vec3f(v);
 }
 
-
 // Todo: send image size to shader
-@compute
-@workgroup_size(1)
+    @compute
+    @workgroup_size(1)
 fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let id = global_id.x + global_id.y * 512;
+    let width: u32 = u32(2048);
+    let id = global_id.x + global_id.y * width;
 
-    let pixel_level = u32( 4 );
-    var p = vec2f( f32( global_id.x ) / 512.0f, f32( global_id.y ) / 512.0f );
-    p = floor( p * 512.0f / f32( pixel_level ) ) / ( 512.0f / f32( pixel_level ) ) + vec2f( 0.5f / ( 512.0f / f32( pixel_level ) ) );
+    let pixel_level = u32(1);
+    var p = vec2f(f32(global_id.x) / f32(width), f32(global_id.y) / f32(width));
+    p = floor(p * f32(width) / f32(pixel_level)) / (f32(width) / f32(pixel_level)) + vec2f(0.5f / (f32(width) / f32(pixel_level)));
 
     // Center position
-    p = p - vec2f( .5f );
+    p = p - vec2f(.5f);
 
-    // Hexagons!
-    let hexCoord = screenPosToHexCoord( p, 0.02f );
-    var data = vec4f( hexCoord, 1 );
+    var color = vec3f(0);
+    color += ray_cast(p);
 
     // Edge
-    if length( p ) > .47f {
-        data = vec4f( 0, 0, 0, 1 );
-    }
-
-    data += funcdata.data[0];
-
-    image.data[id] = data;
+    image.data[id] = vec4f(color, 1);
 }
